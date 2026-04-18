@@ -8,7 +8,11 @@
   "crons": [
     {
       "path": "/api/campaign",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 8 * * 1-5"
+    },
+    {
+      "path": "/api/campaign",
+      "schedule": "0 15 * * 1-4"
     }
   ]
 }
