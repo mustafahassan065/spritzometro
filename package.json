@@ -1,0 +1,23 @@
+{
+  "name": "spritzometro",
+  "version": "1.0.0",
+  "description": "",
+  "main": "fetchBars.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.88.0",
+    "@supabase/supabase-js": "^2.103.0",
+    "axios": "^1.15.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "localtunnel": "^2.0.2",
+    "ngrok": "^5.0.0-beta.2",
+    "openai": "^6.34.0",
+    "twilio": "^5.13.1"
+  }
+}

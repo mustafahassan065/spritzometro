@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SpritzoMetro — Il Prezzo dello Spritz in Italia</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Syne:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+  <style>
+    :root{--ink:#0f0e0c;--surface:#1a1815;--surface2:#242118;--border:#2e2b24;--border2:#3d3930;--text:#e8e0d0;--muted:#8a8070;--spritz:#e8621a;--spritz2:#d4500f;--gold:#c8a84b;--green:#5a9e6f;--orange:#e8621a;--red:#c43030;--font-display:'Cormorant Garamond',serif;--font-ui:'Syne',sans-serif;--font-mono:'DM Mono',monospace}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;background:var(--surface);color:var(--text);font-family:var(--font-ui);overflow:hidden}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:9999;opacity:.35}
+
+    /* HEADER */
+    header{position:fixed;top:0;left:0;right:0;z-index:1000;height:64px;background:rgba(15,14,12,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px}
+    .logo{font-family:var(--font-display);font-size:24px;font-weight:600;color:var(--spritz);letter-spacing:-.5px}
+    .logo-it{font-family:var(--font-display);font-size:12px;font-weight:300;font-style:italic;color:var(--muted)}
+    .hdiv{width:1px;height:22px;background:var(--border2)}
+    .live-badge{display:flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:10px;color:var(--green);letter-spacing:1px;text-transform:uppercase}
+    .live-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:lpulse 2s ease-in-out infinite;box-shadow:0 0 6px var(--green)}
+    @keyframes lpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.8)}}
+    .hstats{display:flex;gap:5px;margin-left:auto}
+    .schip{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 11px;font-family:var(--font-mono);font-size:10px;color:var(--muted);display:flex;align-items:center;gap:5px}
+    .schip strong{color:var(--gold);font-weight:500}
+
+    /* CAMPAIGN TOGGLE */
+    .campaign-wrap{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:6px 14px}
+    .campaign-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+    .toggle-switch{position:relative;width:44px;height:24px;cursor:pointer}
+    .toggle-switch input{opacity:0;width:0;height:0}
+    .toggle-track{position:absolute;inset:0;background:var(--border2);border-radius:12px;transition:background .3s}
+    .toggle-track::after{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;background:var(--muted);border-radius:50%;transition:all .3s}
+    .toggle-switch input:checked+.toggle-track{background:var(--spritz)}
+    .toggle-switch input:checked+.toggle-track::after{transform:translateX(20px);background:white}
+    .c-status{font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:.5px}
+    .c-status.on{color:var(--spritz)}.c-status.off{color:var(--muted)}
+    .week-prog{font-family:var(--font-mono);font-size:9px;color:var(--muted);white-space:nowrap}
+
+    /* WEEK COMPLETE BANNER */
+    .week-banner{display:none;position:fixed;top:64px;left:0;right:0;z-index:900;background:linear-gradient(135deg,#2a1f0a,#1a1500);border-bottom:1px solid var(--gold);padding:10px 24px;align-items:center;gap:12px}
+    .week-banner.show{display:flex}
+    .week-banner-text{font-family:var(--font-mono);font-size:11px;color:var(--gold);flex:1}
+    .week-banner-text strong{color:white}
+    .banner-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px}
+
+    /* LAYOUT */
+    .layout{display:flex;height:100vh;padding-top:64px}
+
+    /* SIDEBAR */
+    .sidebar{width:380px;min-width:380px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;position:relative}
+    .sidebar::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--spritz),var(--gold),transparent)}
+    .sidebar-top{padding:16px 14px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px}
+    .search-wrap{position:relative}
+    .search-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:9px 14px 9px 36px;color:var(--text);font-family:var(--font-ui);font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
+    .search-input::placeholder{color:var(--muted)}
+    .search-input:focus{border-color:var(--spritz);box-shadow:0 0 0 3px rgba(232,98,26,.1)}
+    .sicon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+    .city-filters{display:flex;gap:5px;flex-wrap:wrap}
+    .city-btn{background:transparent;border:1px solid var(--border2);border-radius:4px;padding:4px 10px;color:var(--muted);font-size:10px;font-family:var(--font-mono);letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .15s}
+    .city-btn:hover{border-color:var(--spritz);color:var(--spritz)}
+    .city-btn.active{background:var(--spritz);border-color:var(--spritz);color:white}
+    .sort-row{display:flex;align-items:center;gap:10px}
+    .sort-lbl{font-size:10px;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+    .sort-sel{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;color:var(--text);font-size:11px;font-family:var(--font-mono);outline:none;cursor:pointer}
+    .bar-list{flex:1;overflow-y:auto;padding:8px}
+    .bar-list::-webkit-scrollbar{width:3px}
+    .bar-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+    .bar-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;margin-bottom:5px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:11px;position:relative;overflow:hidden}
+    .bar-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent;transition:background .15s}
+    .bar-card:hover{border-color:var(--border2);transform:translateX(3px)}
+    .bar-card:hover::before{background:var(--spritz)}
+    .bar-card.active{border-color:var(--spritz);background:rgba(232,98,26,.06)}
+    .bar-card.active::before{background:var(--spritz)}
+    .ptag{min-width:56px;text-align:center;background:var(--surface);border-radius:6px;padding:6px 8px;border:1px solid var(--border2);flex-shrink:0}
+    .ptag .val{font-family:var(--font-mono);font-size:15px;font-weight:500;line-height:1;display:block}
+    .ptag .cur{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-top:2px;display:block;text-transform:uppercase;letter-spacing:.5px}
+    .ptag.green .val{color:var(--green)}.ptag.orange .val{color:var(--orange)}.ptag.red .val{color:var(--red)}.ptag.none .val{color:var(--muted)}
+    .binfo{flex:1;min-width:0}
+    .bname{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+    .bmeta{font-size:10px;color:var(--muted);font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px}
+    .brank{font-family:var(--font-mono);font-size:10px;color:var(--border2);flex-shrink:0}
+    .empty-list{text-align:center;padding:48px 20px;color:var(--muted)}
+    .empty-list .eicon{font-size:32px;margin-bottom:12px}
+    .empty-list p{font-size:13px;line-height:1.6}
+    .sidebar-bottom{border-top:1px solid var(--border);padding:12px;display:flex;gap:8px}
+    .btn{flex:1;padding:10px 12px;border-radius:6px;font-size:12px;font-family:var(--font-ui);font-weight:500;cursor:pointer;border:none;transition:all .15s;letter-spacing:.2px}
+    .btn-primary{background:var(--spritz);color:white}.btn-primary:hover{background:var(--spritz2)}
+    .btn-outline{background:transparent;border:1px solid var(--border2);color:var(--muted)}.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
+
+    /* MAP */
+    #map{flex:1;background:var(--ink)}
+    .leaflet-tile{filter:brightness(.22) saturate(.25) sepia(.5)}
+    .leaflet-container{background:#080706}
+    .leaflet-popup-content-wrapper{background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text);box-shadow:0 12px 40px rgba(0,0,0,.8);padding:0}
+    .leaflet-popup-content{margin:0;min-width:200px}
+    .leaflet-popup-tip-container{display:none}
+    .leaflet-popup-close-button{color:var(--muted)!important;top:10px!important;right:10px!important}
+    .popup-inner{padding:16px 18px}
+    .popup-city{font-family:var(--font-mono);font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+    .popup-name{font-family:var(--font-display);font-size:17px;font-weight:600;color:var(--text);margin-bottom:10px;line-height:1.2}
+    .popup-price{font-family:var(--font-mono);font-size:28px;font-weight:500;margin-bottom:6px;line-height:1}
+    .popup-price.green{color:var(--green)}.popup-price.orange{color:var(--orange)}.popup-price.red{color:var(--red)}.popup-price.none{color:var(--muted);font-size:14px}
+    .popup-date{font-size:10px;color:var(--muted);font-family:var(--font-mono);margin-bottom:10px}
+    .popup-src{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:9px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .map-legend{position:absolute;bottom:28px;right:16px;z-index:500;background:rgba(15,14,12,.94);backdrop-filter:blur(12px);border:1px solid var(--border2);border-radius:8px;padding:14px 16px}
+    .legend-title{font-size:9px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+    .legend-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;font-family:var(--font-mono);color:var(--text)}
+    .ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+    /* MODALS */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);z-index:2000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+    .overlay.open{opacity:1;pointer-events:all}
+    .modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:440px;max-width:calc(100vw - 40px);max-height:calc(100vh - 80px);overflow-y:auto;transform:translateY(20px) scale(.98);transition:transform .25s;position:relative}
+    .modal::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--spritz),transparent)}
+    .overlay.open .modal{transform:translateY(0) scale(1)}
+    .mhead{padding:20px 22px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+    .mtitle{font-family:var(--font-display);font-size:21px;font-weight:600;color:var(--text);line-height:1.2}
+    .msub{font-size:11px;color:var(--muted);margin-top:3px}
+    .mx{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:4px;transition:all .15s;margin-left:12px;flex-shrink:0}
+    .mx:hover{background:var(--border);color:var(--text)}
+    .mbody{padding:20px 22px 24px}
+    .field{margin-bottom:15px}
+    .flabel{display:block;font-size:10px;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+    .finput,.fselect,.ftextarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:10px 14px;color:var(--text);font-family:var(--font-ui);font-size:13px;outline:none;transition:border-color .2s,box-shadow .2s}
+    .finput:focus,.fselect:focus,.ftextarea:focus{border-color:var(--spritz);box-shadow:0 0 0 3px rgba(232,98,26,.1)}
+    .finput::placeholder,.ftextarea::placeholder{color:var(--muted)}
+    .ftextarea{resize:vertical;min-height:78px}
+    .frow{display:flex;gap:12px}.frow .field{flex:1}
+    .sbtn{width:100%;padding:12px;background:var(--spritz);border:none;border-radius:8px;color:white;font-family:var(--font-ui);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:6px}
+    .sbtn:hover{background:var(--spritz2);transform:translateY(-1px)}
+    .smsg{display:none;text-align:center;padding:22px;color:var(--green);font-size:14px}
+    .smsg .sico{font-size:28px;display:block;margin-bottom:8px}
+
+    .top-loader{position:fixed;top:64px;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--spritz),var(--gold));z-index:999;transform-origin:left;display:none}
+    .top-loader.active{display:block;animation:lda 1.8s ease-in-out infinite}
+    @keyframes lda{0%{transform:scaleX(0);opacity:1}60%{transform:scaleX(.75);opacity:1}100%{transform:scaleX(1);opacity:0}}
+
+    @media(max-width:768px){
+      .sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;min-width:unset;height:48vh;z-index:500;border-right:none;border-top:1px solid var(--border)}
+      #map{height:52vh}.layout{flex-direction:column}.hstats{display:none}.logo-it{display:none}
+    }
+  </style>
+</head>
+<body>
+<div class="top-loader" id="loader"></div>
+
+<!-- WEEK COMPLETE BANNER -->
+<div class="week-banner" id="weekBanner">
+  <span class="week-banner-text">🎉 <strong>This week's 300 calls are complete!</strong> Next campaign starts automatically on Monday. Bars will be refreshed with new data.</span>
+  <button class="banner-close" onclick="document.getElementById('weekBanner').classList.remove('show')">✕</button>
+</div>
+
+<header>
+  <div class="logo">SpritzoMetro</div>
+  <span class="logo-it">prezzi in tempo reale</span>
+  <div class="hdiv"></div>
+  <div class="live-badge"><div class="live-dot"></div>Live</div>
+
+  <div class="campaign-wrap">
+    <span class="campaign-label">Campaign</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="campaignToggle" onchange="toggleCampaign()"/>
+      <div class="toggle-track"></div>
+    </label>
+    <span class="c-status off" id="campaignStatus">OFF</span>
+    <span class="week-prog" id="weekProgress"></span>
+  </div>
+
+  <div class="hstats">
+    <div class="schip">🍊 <strong id="totalBars">—</strong></div>
+    <div class="schip">📍 <strong id="totalCities">—</strong></div>
+    <div class="schip">⌀ <strong id="avgPrice">—</strong></div>
+    <div class="schip">↓ <strong id="minPrice">—</strong></div>
+    <div class="schip">↑ <strong id="maxPrice">—</strong></div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <div class="search-wrap">
+        <span class="sicon">🔍</span>
+        <input class="search-input" id="searchInput" type="text" placeholder="Cerca bar, città..."/>
+      </div>
+      <div class="city-filters" id="cityFilters">
+        <button class="city-btn active" data-city="all" onclick="setCity('all')">Tutti</button>
+      </div>
+      <div class="sort-row">
+        <span class="sort-lbl">Ordina</span>
+        <select class="sort-sel" id="sortSelect">
+          <option value="price_asc">Prezzo ↑</option>
+          <option value="price_desc">Prezzo ↓</option>
+          <option value="name_asc">Nome A–Z</option>
+          <option value="recent">Più recenti</option>
+        </select>
+      </div>
+    </div>
+    <div class="bar-list" id="barList">
+      <div class="empty-list"><div class="eicon">🍊</div><p>Caricamento...</p></div>
+    </div>
+    <div class="sidebar-bottom">
+      <button class="btn btn-primary" onclick="openModal('contribute')">+ Aggiungi Prezzo</button>
+      <button class="btn btn-outline" onclick="openModal('claim')">Sei il proprietario?</button>
+    </div>
+  </div>
+
+  <div style="flex:1;position:relative;">
+    <div id="map"></div>
+    <div class="map-legend">
+      <div class="legend-title">Prezzo Aperol Spritz</div>
+      <div class="legend-row"><div class="ldot" style="background:var(--green)"></div>Economico — meno di €4</div>
+      <div class="legend-row"><div class="ldot" style="background:var(--orange)"></div>Nella media — €4 a €6</div>
+      <div class="legend-row"><div class="ldot" style="background:var(--red)"></div>Caro — più di €6</div>
+      <div class="legend-row"><div class="ldot" style="background:var(--muted)"></div>Non disponibile</div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTRIBUTE MODAL -->
+<div class="overlay" id="contributeOverlay">
+  <div class="modal">
+    <div class="mhead">
+      <div><div class="mtitle">Aggiungi un Prezzo</div><div class="msub">Aiuta la community a mappare i prezzi</div></div>
+      <button class="mx" onclick="closeModal('contribute')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="field"><label class="flabel">Nome del Bar *</label><input class="finput" id="c_name" placeholder="Es. Bar Centrale"/></div>
+        <div class="field"><label class="flabel">Città *</label>
+          <select class="fselect" id="c_city">
+            <option value="">Seleziona...</option>
+            <option>Milano</option><option>Roma</option><option>Napoli</option>
+            <option>Venezia</option><option>Firenze</option><option>Torino</option>
+            <option>Bologna</option><option>Palermo</option><option>Verona</option><option>Altra</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="field"><label class="flabel">Prezzo (€) *</label><input class="finput" id="c_price" type="number" placeholder="4.50" step="0.5" min="1" max="25"/></div>
+        <div class="field"><label class="flabel">Indirizzo</label><input class="finput" id="c_address" placeholder="Via Roma 12"/></div>
+      </div>
+      <div class="field"><label class="flabel">Note</label><textarea class="ftextarea" id="c_notes" placeholder="happy hour, tipo spritz..."></textarea></div>
+      <button class="sbtn" onclick="submitContribute()">Invia Prezzo 🍊</button>
+      <div class="smsg" id="c_success"><span class="sico">✅</span>Grazie! Contributo ricevuto.</div>
+    </div>
+  </div>
+</div>
+
+<!-- CLAIM MODAL -->
+<div class="overlay" id="claimOverlay">
+  <div class="modal">
+    <div class="mhead">
+      <div><div class="mtitle">Sei il Proprietario?</div><div class="msub">Gestisci il tuo bar su SpritzoMetro</div></div>
+      <button class="mx" onclick="closeModal('claim')">✕</button>
+    </div>
+    <div class="mbody">
+      <div class="field"><label class="flabel">Nome del Bar *</label><input class="finput" id="cl_bar" placeholder="Nome esatto"/></div>
+      <div class="frow">
+        <div class="field"><label class="flabel">Il tuo nome *</label><input class="finput" id="cl_owner" placeholder="Nome e cognome"/></div>
+        <div class="field"><label class="flabel">Email *</label><input class="finput" id="cl_email" type="email" placeholder="email@esempio.it"/></div>
+      </div>
+      <div class="field"><label class="flabel">Telefono</label><input class="finput" id="cl_phone" placeholder="+39 ..."/></div>
+      <div class="field"><label class="flabel">Messaggio</label><textarea class="ftextarea" id="cl_msg" placeholder="Aggiorna il prezzo o descrivi il tuo bar..."></textarea></div>
+      <button class="sbtn" onclick="submitClaim()">Richiedi Ownership 🏪</button>
+      <div class="smsg" id="cl_success"><span class="sico">✅</span>Richiesta inviata! Ti contatteremo presto.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let allBars=[], filteredBars=[], markers={}, map;
+let activeCity='all', activeBarId=null;
+
+function initMap() {
+  map = L.map('map',{center:[42.5,12.5],zoom:6,zoomControl:true,attributionControl:false});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+  setTimeout(()=>map.invalidateSize(),300);
+}
+
+function priceColor(p){if(!p)return'#6b6460';if(p<4)return'#5a9e6f';if(p<=6)return'#e8621a';return'#c43030'}
+function priceClass(p){if(!p)return'none';if(p<4)return'green';if(p<=6)return'orange';return'red'}
+
+function makeMarker(price){
+  const color=priceColor(price),label=price?`€${price.toFixed(1)}`:'?';
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="56" height="34" viewBox="0 0 56 34"><rect x="1" y="1" width="54" height="24" rx="5" fill="${color}" stroke="rgba(0,0,0,.4)" stroke-width="1"/><text x="28" y="14" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="DM Mono,monospace" font-weight="500" font-size="11">${label}</text><polygon points="22,25 28,33 34,25" fill="${color}"/></svg>`;
+  return L.divIcon({html:svg,className:'',iconSize:[56,34],iconAnchor:[28,34],popupAnchor:[0,-36]});
+}
+
+// CAMPAIGN
+async function loadCampaignStatus() {
+  const {data} = await db.from('campaign_settings').select('*').eq('id',1).single();
+  if (!data) return;
+  const toggle = document.getElementById('campaignToggle');
+  const status = document.getElementById('campaignStatus');
+  const prog   = document.getElementById('weekProgress');
+  toggle.checked = data.is_active;
+  status.textContent = data.is_active ? 'ON' : 'OFF';
+  status.className = 'c-status ' + (data.is_active ? 'on' : 'off');
+  prog.textContent = data.calls_per_week ? `${data.current_week_calls||0}/${data.calls_per_week}` : '';
+
+  // Show week complete banner
+  if (data.week_complete_notified) {
+    document.getElementById('weekBanner').classList.add('show');
+  }
+}
+
+async function toggleCampaign() {
+  const isActive = document.getElementById('campaignToggle').checked;
+  const status = document.getElementById('campaignStatus');
+  await db.from('campaign_settings').update({is_active:isActive,updated_at:new Date().toISOString()}).eq('id',1);
+  status.textContent = isActive ? 'ON' : 'OFF';
+  status.className = 'c-status ' + (isActive ? 'on' : 'off');
+}
+
+// DATA
+async function loadData() {
+  document.getElementById('loader').classList.add('active');
+  try {
+    const {data:bars,error} = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
+    if (error) throw error;
+    allBars = bars.map(bar=>{
+      const prices=(bar.prices||[]).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at));
+      const latest=prices[0];
+      return{...bar,latestPrice:latest?.price||null,calledAt:latest?.called_at||null,source:latest?.source||null};
+    });
+    buildCityFilters(); updateStats(); applyFilters(); setupRealtime(); loadCampaignStatus();
+  } catch(err) {
+    document.getElementById('barList').innerHTML=`<div class="empty-list"><div class="eicon">⚠️</div><p>Errore nel caricamento.</p></div>`;
+  } finally {
+    document.getElementById('loader').classList.remove('active');
+  }
+}
+
+function buildCityFilters(){
+  const cities=[...new Set(allBars.map(b=>b.city).filter(Boolean))].sort();
+  const wrap=document.getElementById('cityFilters');
+  wrap.innerHTML=`<button class="city-btn active" data-city="all" onclick="setCity('all')">Tutti</button>`;
+  cities.forEach(c=>{const btn=document.createElement('button');btn.className='city-btn';btn.dataset.city=c;btn.textContent=c;btn.onclick=()=>setCity(c);wrap.appendChild(btn)});
+  document.getElementById('totalCities').textContent=cities.length;
+}
+
+function setCity(city){activeCity=city;document.querySelectorAll('.city-btn').forEach(b=>b.classList.toggle('active',b.dataset.city===city));applyFilters()}
+
+function updateStats(){
+  const wp=allBars.filter(b=>b.latestPrice);
+  document.getElementById('totalBars').textContent=allBars.length;
+  if(wp.length){const prices=wp.map(b=>b.latestPrice),avg=prices.reduce((s,p)=>s+p,0)/prices.length;
+    document.getElementById('avgPrice').textContent=`€${avg.toFixed(2)}`;
+    document.getElementById('minPrice').textContent=`€${Math.min(...prices).toFixed(2)}`;
+    document.getElementById('maxPrice').textContent=`€${Math.max(...prices).toFixed(2)}`;}
+}
+
+function applyFilters(){
+  const search=document.getElementById('searchInput').value.toLowerCase(),sort=document.getElementById('sortSelect').value;
+  filteredBars=allBars.filter(b=>{const mc=activeCity==='all'||b.city===activeCity,ms=!search||b.name.toLowerCase().includes(search)||(b.city||'').toLowerCase().includes(search)||(b.address||'').toLowerCase().includes(search);return mc&&ms});
+  filteredBars.sort((a,b)=>{if(sort==='price_asc')return(a.latestPrice||99)-(b.latestPrice||99);if(sort==='price_desc')return(b.latestPrice||0)-(a.latestPrice||0);if(sort==='name_asc')return a.name.localeCompare(b.name);if(sort==='recent')return new Date(b.calledAt||0)-new Date(a.calledAt||0);return 0});
+  renderList();renderMarkers();
+}
+
+function renderList(){
+  const list=document.getElementById('barList');
+  if(!filteredBars.length){list.innerHTML=`<div class="empty-list"><div class="eicon">🔍</div><p>Nessun bar trovato.</p></div>`;return}
+  list.innerHTML=filteredBars.map((bar,i)=>{
+    const pc=priceClass(bar.latestPrice),price=bar.latestPrice?`€${bar.latestPrice.toFixed(2)}`:'—';
+    const date=bar.calledAt?new Date(bar.calledAt).toLocaleDateString('it-IT'):null,meta=[bar.city,date].filter(Boolean).join(' · ');
+    return`<div class="bar-card ${bar.id===activeBarId?'active':''}" onclick="selectBar('${bar.id}')" data-id="${bar.id}"><div class="ptag ${pc}"><span class="val">${price}</span><span class="cur">spritz</span></div><div class="binfo"><div class="bname">${bar.name}</div><div class="bmeta">${meta}</div></div><div class="brank">#${i+1}</div></div>`;
+  }).join('');
+}
+
+function renderMarkers(){
+  Object.values(markers).forEach(m=>map.removeLayer(m));markers={};
+  filteredBars.forEach(bar=>{
+    if(!bar.latitude||!bar.longitude)return;
+    const m=L.marker([bar.latitude,bar.longitude],{icon:makeMarker(bar.latestPrice)});
+    const date=bar.calledAt?new Date(bar.calledAt).toLocaleDateString('it-IT'):'Non chiamato';
+    const si=bar.source==='ai_call'?'🤖':bar.source==='user_submit'?'👤':'📞';
+    const sl=bar.source==='ai_call'?'AI Call':bar.source==='user_submit'?'Utente':'Chiamata';
+    m.bindPopup(`<div class="popup-inner"><div class="popup-city">${bar.city||''}</div><div class="popup-name">${bar.name}</div>${bar.latestPrice?`<div class="popup-price ${priceClass(bar.latestPrice)}">€${bar.latestPrice.toFixed(2)}</div>`:`<div class="popup-price none">Prezzo non disponibile</div>`}<div class="popup-date">${date}</div>${bar.source?`<div class="popup-src">${si} ${sl}</div>`:''}</div>`,{maxWidth:280});
+    m.on('click',()=>selectBar(bar.id,false));m.addTo(map);markers[bar.id]=m;
+  });
+}
+
+function selectBar(id,flyTo=true){
+  activeBarId=id;const bar=allBars.find(b=>b.id===id);if(!bar)return;
+  document.querySelectorAll('.bar-card').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  const el=document.querySelector(`.bar-card[data-id="${id}"]`);if(el)el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(flyTo&&bar.latitude&&bar.longitude)map.flyTo([bar.latitude,bar.longitude],15,{duration:1.2});
+  if(markers[id])markers[id].openPopup();
+}
+
+function setupRealtime(){
+  db.channel('live-updates')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
+      const bar=allBars.find(b=>b.id===payload.new.bar_id);
+      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();applyFilters();}
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'campaign_settings'},()=>loadCampaignStatus())
+    .subscribe();
+}
+
+function openModal(t){document.getElementById(t+'Overlay').classList.add('open')}
+function closeModal(t){document.getElementById(t+'Overlay').classList.remove('open')}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+
+async function submitContribute(){
+  const name=document.getElementById('c_name').value.trim(),city=document.getElementById('c_city').value,price=parseFloat(document.getElementById('c_price').value),addr=document.getElementById('c_address').value.trim();
+  if(!name||!city||!price){alert('Compila i campi obbligatori (*)');return}
+  let barId;const existing=allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&b.city===city);
+  if(existing){barId=existing.id}else{const{data,error}=await db.from('bars').insert({name,city,address:addr,source:'user_submit'}).select().single();if(error){alert('Errore. Riprova.');return}barId=data.id;allBars.push({...data,latestPrice:null,prices:[]})}
+  const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
+  if(error){alert('Errore nel salvataggio.');return}
+  document.getElementById('c_success').style.display='block';setTimeout(()=>{closeModal('contribute');document.getElementById('c_success').style.display='none'},2500);
+}
+
+async function submitClaim(){
+  const barName=document.getElementById('cl_bar').value.trim(),ownerName=document.getElementById('cl_owner').value.trim(),email=document.getElementById('cl_email').value.trim();
+  if(!barName||!ownerName||!email){alert('Compila i campi obbligatori (*)');return}
+  await db.from('claims').insert({bar_name:barName,owner_name:ownerName,email,phone:document.getElementById('cl_phone').value.trim(),message:document.getElementById('cl_msg').value.trim()});
+  document.getElementById('cl_success').style.display='block';setTimeout(()=>{closeModal('claim');document.getElementById('cl_success').style.display='none'},2500);
+}
+
+document.getElementById('searchInput').addEventListener('input',applyFilters);
+document.getElementById('sortSelect').addEventListener('change',applyFilters);
+initMap();loadData();
+</script>
+</body>
+</html>
