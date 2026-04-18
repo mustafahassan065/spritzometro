@@ -47,7 +47,7 @@
     .banner-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px}
 
     /* LAYOUT */
-    .layout{display:flex;height:100vh;padding-top:64px}
+    .layout{display:flex;height:100vh;padding-top:64px;overflow:hidden;}
 
     /* SIDEBAR */
     .sidebar{width:380px;min-width:380px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;position:relative}
@@ -91,7 +91,7 @@
     .btn-outline{background:transparent;border:1px solid var(--border2);color:var(--muted)}.btn-outline:hover{border-color:var(--gold);color:var(--gold)}
 
     /* MAP */
-    #map{flex:1;background:var(--ink)}
+    #map{flex:1;background:var(--ink);height:100%;width:100%;min-height:0;}
     .leaflet-tile{filter:brightness(.22) saturate(.25) sepia(.5)}
     .leaflet-container{background:#080706}
     .leaflet-popup-content-wrapper{background:var(--surface);border:1px solid var(--border2);border-radius:10px;color:var(--text);box-shadow:0 12px 40px rgba(0,0,0,.8);padding:0}
