@@ -281,7 +281,10 @@ let activeCity='all', activeBarId=null;
 function initMap() {
   map = L.map('map',{center:[42.5,12.5],zoom:6,zoomControl:true,attributionControl:false});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-  setTimeout(()=>map.invalidateSize(),300);
+  setTimeout(() => map.invalidateSize(), 100);
+  setTimeout(() => map.invalidateSize(), 500);
+  setTimeout(() => map.invalidateSize(), 1000);
+  window.addEventListener('resize', () => map.invalidateSize());
 }
 
 function priceColor(p){if(!p)return'#6b6460';if(p<4)return'#5a9e6f';if(p<=6)return'#e8621a';return'#c43030'}
