@@ -138,6 +138,21 @@
     .top-loader.active{display:block;animation:lda 1.8s ease-in-out infinite}
     @keyframes lda{0%{transform:scaleX(0);opacity:1}60%{transform:scaleX(.75);opacity:1}100%{transform:scaleX(1);opacity:0}}
 
+    /* ADMIN */
+    .admin-btn{background:none;border:1px solid var(--border2);border-radius:6px;color:var(--muted);cursor:pointer;padding:5px 10px;font-size:14px;transition:all .15s;margin-left:4px}
+    .admin-btn:hover{border-color:var(--gold);color:var(--gold)}
+    .admin-panel{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:3000;background:var(--surface);border:1px solid var(--gold);border-radius:12px;padding:20px 24px;min-width:340px;box-shadow:0 12px 40px rgba(0,0,0,.9)}
+    .admin-panel.show{display:block}
+    .admin-title{font-family:var(--font-mono);font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px}
+    .admin-row{display:flex;gap:8px;margin-bottom:10px}
+    .admin-input{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text);font-family:var(--font-mono);font-size:12px;outline:none}
+    .admin-input:focus{border-color:var(--gold)}
+    .admin-run{background:var(--gold);border:none;border-radius:6px;padding:8px 16px;color:var(--ink);font-family:var(--font-mono);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .admin-run:hover{background:#d4b050}
+    .admin-run:disabled{opacity:.5;cursor:not-allowed}
+    .admin-result{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:8px;min-height:20px;line-height:1.5}
+    .admin-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px}
+
     @media(max-width:768px){
       .sidebar{position:fixed;bottom:0;left:0;right:0;width:100%;min-width:unset;height:48vh;z-index:500;border-right:none;border-top:1px solid var(--border)}
       #map{height:52vh}.layout{flex-direction:column}.hstats{display:none}.logo-it{display:none}
@@ -176,6 +191,7 @@
     <div class="schip">↓ <strong id="minPrice">—</strong></div>
     <div class="schip">↑ <strong id="maxPrice">—</strong></div>
   </div>
+  <button class="admin-btn" onclick="openAdminPanel()" title="Admin Panel">⚙️</button>
 </header>
 
 <div class="layout">
@@ -271,8 +287,8 @@
 </div>
 
 <script>
-const SUPABASE_URL      = 'https://wkaeyssmfwkefxjhsgav.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrYWV5c3NtZndrZWZ4amhzZ2F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjUxMzAsImV4cCI6MjA5MTY0MTEzMH0.lgq4S5Oexr5aNn2Zswo-8uqH--vFSiJmDNkAbHsFmlY';
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let allBars=[], filteredBars=[], markers={}, map;
@@ -429,6 +445,39 @@ async function submitClaim(){
 document.getElementById('searchInput').addEventListener('input',applyFilters);
 document.getElementById('sortSelect').addEventListener('change',applyFilters);
 initMap();loadData();
+
+// ADMIN PANEL
+function openAdminPanel(){document.getElementById('adminPanel').classList.add('show')}
+function closeAdminPanel(){document.getElementById('adminPanel').classList.remove('show')}
+
+async function runFetchBars(){
+  const key=document.getElementById('adminKey').value;
+  const result=document.getElementById('adminResult');
+  const btn=document.getElementById('fetchBtn');
+  if(!key){result.textContent='❌ Enter password first';result.style.color='var(--red)';return}
+  btn.disabled=true;btn.textContent='Running...';
+  result.textContent='⏳ Fetching bars from Google Maps — this may take 2-3 minutes...';
+  result.style.color='var(--muted)';
+  try{
+    const res=await fetch('/api/fetchbars',{headers:{'x-admin-key':key}});
+    const data=await res.json();
+    if(res.status===401){result.textContent='❌ Wrong password';result.style.color='var(--red)';}
+    else{result.innerHTML=`✅ Done!<br>Bars added: ${data.bars_added}<br>Skipped (no phone): ${data.bars_skipped_no_phone}<br>Total searched: ${data.total_searched}`;result.style.color='var(--green)';setTimeout(()=>loadData(),2000);}
+  }catch(err){result.textContent='❌ Error: '+err.message;result.style.color='var(--red)';}
+  finally{btn.disabled=false;btn.textContent='Fetch Bars';}
+}
 </script>
+
+<!-- ADMIN PANEL -->
+<div class="admin-panel" id="adminPanel">
+  <button class="admin-close" onclick="closeAdminPanel()">✕</button>
+  <div class="admin-title">⚙️ Admin Panel</div>
+  <div class="admin-row">
+    <input class="admin-input" id="adminKey" type="password" placeholder="Admin password"/>
+    <button class="admin-run" id="fetchBtn" onclick="runFetchBars()">Fetch Bars</button>
+  </div>
+  <div class="admin-result" id="adminResult">Enter password and click Fetch Bars to load bars from Google Maps across all 5 cities.</div>
+</div>
+
 </body>
 </html>
