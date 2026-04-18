@@ -1,8 +1,7 @@
-// api/campaign.js — Vercel Edge Function
-// Runs every 15 minutes via cron (vercel.json)
+// api/campaign.js — Vercel Serverless Function
 
-const { createClient } = require('@supabase/supabase-js');
-const axios = require('axios');
+import { createClient } from '@supabase/supabase-js';
+import axios from 'axios';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -183,7 +182,7 @@ async function makeCall(bar) {
 }
 
 // ── Main handler ──
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     const { data: settings } = await supabase
       .from('campaign_settings')
