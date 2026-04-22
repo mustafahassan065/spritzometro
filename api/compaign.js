@@ -173,7 +173,9 @@ async function makeCall(bar) {
       customer: { number: bar.phone, name: bar.name },
       assistantId: ASSISTANT_ID,
       phoneNumberId: PHONE_ID,
-      metadata: { bar_id: bar.id, bar_name: bar.name, city: bar.city }
+      assistantOverrides: {
+        metadata: { bar_id: bar.id, bar_name: bar.name, city: bar.city }
+      }
     },
     { headers: { 'Authorization': `Bearer ${VAPI_API_KEY}`, 'Content-Type': 'application/json' } }
   );
