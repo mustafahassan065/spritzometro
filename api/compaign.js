@@ -19,16 +19,15 @@ const CITIES = ['Milan', 'Rome', 'Naples', 'Venice', 'Florence'];
 // ── Italian time ──
 function getItalyTime() {
   const now = new Date();
-  const jan = new Date(now.getFullYear(), 0, 1);
-  const jul = new Date(now.getFullYear(), 6, 1);
-  const isDST = now.getTimezoneOffset() < Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
-  const offset = isDST ? 2 : 1;
-  const it = new Date(now.getTime() + offset * 3600000);
+  // Italy is always UTC+1 in winter, UTC+2 in summer (DST)
+  // Use Intl to get correct Italy time
+  const italyStr = now.toLocaleString('en-US', { timeZone: 'Europe/Rome' });
+  const italy = new Date(italyStr);
   return {
-    hour: it.getUTCHours(),
-    minute: it.getUTCMinutes(),
-    day: it.getUTCDay(),
-    decimal: it.getUTCHours() + it.getUTCMinutes() / 60
+    hour: italy.getHours(),
+    minute: italy.getMinutes(),
+    day: italy.getDay(),
+    decimal: italy.getHours() + italy.getMinutes() / 60
   };
 }
 
