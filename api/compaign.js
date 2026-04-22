@@ -167,10 +167,16 @@ async function getNextBars(limit) {
 
 // ── Make Vapi call ──
 async function makeCall(bar) {
+  // Fix Italian phone number format
+  let phone = bar.phone.replace(/\s+/g, '').replace(/[^\d+]/g, '');
+  if (!phone.startsWith('+')) {
+    phone = '+39' + phone;
+  }
+
   const res = await axios.post(
     'https://api.vapi.ai/call/phone',
     {
-      customer: { number: bar.phone, name: bar.name },
+      customer: { number: phone, name: bar.name },
       assistantId: ASSISTANT_ID,
       phoneNumberId: PHONE_ID,
       assistantOverrides: {
