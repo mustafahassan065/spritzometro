@@ -248,7 +248,7 @@ export default async function handler(req, res) {
           vapi_call_id: result.id
         }).eq('id', bar.id);
         success++;
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 8000));
       } catch (err) {
         console.error(`Call failed: ${bar.name}`, err.message);
         failed++;
