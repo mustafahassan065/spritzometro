@@ -1,4 +1,5 @@
 // api/campaign.js — Vercel Serverless Function
+// Runs automatically via cron — no toggle needed
 
 import { createClient } from '@supabase/supabase-js';
 import axios from 'axios';
@@ -8,103 +9,66 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const VAPI_API_KEY  = process.env.VAPI_API_KEY;
-const ASSISTANT_ID  = process.env.VAPI_ASSISTANT_ID;
-const PHONE_ID      = process.env.VAPI_PHONE_ID;
-const GMAPS_KEY     = process.env.GOOGLE_MAPS_API_KEY;
+const VAPI_API_KEY = process.env.VAPI_API_KEY;
+const ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID;
+const PHONE_ID     = process.env.VAPI_PHONE_ID;
+const GMAPS_KEY    = process.env.GOOGLE_MAPS_API_KEY;
 
-// Cities client ne specify ki hain
 const CITIES = ['Milan', 'Rome', 'Naples', 'Venice', 'Florence'];
 
-// ── Italian time ──
+// ── Italian time (correct DST handling) ──
 function getItalyTime() {
   const now = new Date();
-  // Italy is always UTC+1 in winter, UTC+2 in summer (DST)
-  // Use Intl to get correct Italy time
   const italyStr = now.toLocaleString('en-US', { timeZone: 'Europe/Rome' });
   const italy = new Date(italyStr);
   return {
     hour: italy.getHours(),
     minute: italy.getMinutes(),
-    day: italy.getDay(),
+    day: italy.getDay(), // 0=Sun, 1=Mon...6=Sat
     decimal: italy.getHours() + italy.getMinutes() / 60
   };
 }
 
-// ── Contact window check ──
+// ── Contact window — exactly as per client PDF ──
 function isContactWindow(it) {
   const { day, decimal } = it;
-  if (day >= 1 && day <= 4) return (decimal >= 10.0 && decimal < 11.5) || (decimal >= 15.5 && decimal < 17.5);
-  if (day === 5)            return (decimal >= 10.0 && decimal < 11.5) || (decimal >= 15.0 && decimal < 16.5);
-  if (day === 6)            return decimal >= 10.5 && decimal < 11.5;
-  if (day === 0)            return decimal >= 11.0 && decimal < 12.0;
+  // Mon-Thu: 10:00-11:30 and 15:30-17:30
+  if (day >= 1 && day <= 4)
+    return (decimal >= 10.0 && decimal < 11.5) || (decimal >= 15.5 && decimal < 17.5);
+  // Friday: 10:00-11:30 and 15:00-16:30
+  if (day === 5)
+    return (decimal >= 10.0 && decimal < 11.5) || (decimal >= 15.0 && decimal < 16.5);
+  // Saturday: 10:30-11:30 only
+  if (day === 6)
+    return decimal >= 10.5 && decimal < 11.5;
+  // Sunday: 11:00-12:00 only
+  if (day === 0)
+    return decimal >= 11.0 && decimal < 12.0;
   return false;
 }
 
-// ── Fetch new bars from Google Maps ──
-async function fetchNewBarsForCity(city) {
-  try {
-    const res = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
-      params: { query: `bar spritz ${city} Italy`, key: GMAPS_KEY, language: 'it' }
-    });
-
-    const places = res.data.results || [];
-    let added = 0;
-
-    for (const place of places.slice(0, 5)) {
-      // Get phone number
-      const details = await axios.get('https://maps.googleapis.com/maps/api/place/details/json', {
-        params: { place_id: place.place_id, fields: 'name,formatted_phone_number,formatted_address,geometry', key: GMAPS_KEY, language: 'it' }
-      });
-
-      const d = details.data.result;
-      if (!d.formatted_phone_number) continue;
-
-      const { error } = await supabase.from('bars').upsert({
-        name: d.name,
-        address: d.formatted_address,
-        city,
-        phone: d.formatted_phone_number,
-        latitude: d.geometry?.location?.lat,
-        longitude: d.geometry?.location?.lng,
-        place_id: place.place_id,
-        call_count: 0,
-        last_called_at: null
-      }, { onConflict: 'place_id' });
-
-      if (!error) added++;
-      await new Promise(r => setTimeout(r, 200));
-    }
-
-    return added;
-  } catch (err) {
-    console.error(`fetchBars error for ${city}:`, err.message);
-    return 0;
-  }
-}
-
-// ── Auto-reset weekly counter ──
+// ── Week reset — every 7 days reset all bars for re-calling ──
 async function handleWeekReset(settings) {
   const weekStart = new Date(settings.week_start_date);
   const now = new Date();
   const daysDiff = Math.floor((now - weekStart) / 86400000);
 
   if (daysDiff >= 7) {
-    console.log('📅 New week — resetting counters and re-queuing all bars');
+    console.log('New week — resetting all bars for re-calling');
 
-    // Reset all bars' last_called_at so they get called again
-    await supabase.from('bars').update({ last_called_at: null }).neq('id', '00000000-0000-0000-0000-000000000000');
+    // Reset last_called_at for all bars so they get called again
+    await supabase
+      .from('bars')
+      .update({ last_called_at: null })
+      .neq('id', '00000000-0000-0000-0000-000000000000');
 
-    // Remove bars with 3+ failed calls (no price ever recorded)
+    // Remove bars that never answered (3+ calls, no price)
     const { data: failedBars } = await supabase
       .from('bars')
       .select('id')
       .gte('call_count', 3);
 
     if (failedBars && failedBars.length > 0) {
-      console.log(`🗑️  Removing ${failedBars.length} unresponsive bars`);
-
-      // Check which ones have no prices
       for (const bar of failedBars) {
         const { data: prices } = await supabase
           .from('prices')
@@ -117,21 +81,39 @@ async function handleWeekReset(settings) {
         }
       }
 
-      // Fetch replacements from Google Maps
-      console.log('🔍 Fetching replacement bars...');
-      let totalAdded = 0;
+      // Fetch replacement bars from Google Maps
       for (const city of CITIES) {
-        const added = await fetchNewBarsForCity(city);
-        totalAdded += added;
+        try {
+          const res = await axios.get(
+            'https://maps.googleapis.com/maps/api/place/textsearch/json',
+            { params: { query: `bar aperitivo ${city} Italy`, key: GMAPS_KEY, language: 'it' } }
+          );
+          for (const place of (res.data.results || []).slice(0, 5)) {
+            const det = await axios.get(
+              'https://maps.googleapis.com/maps/api/place/details/json',
+              { params: { place_id: place.place_id, fields: 'name,formatted_phone_number,formatted_address,geometry', key: GMAPS_KEY } }
+            );
+            const d = det.data.result;
+            if (!d.formatted_phone_number) continue;
+            await supabase.from('bars').insert({
+              name: d.name, address: d.formatted_address, city,
+              phone: d.formatted_phone_number,
+              latitude: d.geometry?.location?.lat,
+              longitude: d.geometry?.location?.lng,
+              place_id: place.place_id, call_count: 0, last_called_at: null
+            }).select();
+            await new Promise(r => setTimeout(r, 200));
+          }
+        } catch (e) { console.error(`Fetch error ${city}:`, e.message); }
         await new Promise(r => setTimeout(r, 500));
       }
-      console.log(`✅ Added ${totalAdded} new bars`);
     }
 
     // Reset weekly counter
     await supabase.from('campaign_settings').update({
       current_week_calls: 0,
       week_start_date: now.toISOString().split('T')[0],
+      week_complete_notified: false,
       weekly_reset_at: now.toISOString()
     }).eq('id', 1);
 
@@ -142,7 +124,7 @@ async function handleWeekReset(settings) {
 
 // ── Get next bars to call ──
 async function getNextBars(limit) {
-  // First: bars never called this week
+  // First: uncalled bars
   const { data: uncalled } = await supabase
     .from('bars')
     .select('id, name, phone, city, call_count')
@@ -165,13 +147,10 @@ async function getNextBars(limit) {
   return [...(uncalled || []), ...(oldest || [])];
 }
 
-// ── Make Vapi call ──
+// ── Make Vapi call with correct Italian phone format ──
 async function makeCall(bar) {
-  // Fix Italian phone number format
   let phone = bar.phone.replace(/\s+/g, '').replace(/[^\d+]/g, '');
-  if (!phone.startsWith('+')) {
-    phone = '+39' + phone;
-  }
+  if (!phone.startsWith('+')) phone = '+39' + phone;
 
   const res = await axios.post(
     'https://api.vapi.ai/call/phone',
@@ -191,44 +170,40 @@ async function makeCall(bar) {
 // ── Main handler ──
 export default async function handler(req, res) {
   try {
+    // Get campaign settings
     const { data: settings } = await supabase
       .from('campaign_settings')
       .select('*')
       .eq('id', 1)
       .single();
 
-    // Campaign off
-    if (!settings.is_active) {
-      return res.json({ status: 'inactive' });
-    }
-
-    // Time window check
+    // Check Italian time window — no is_active check needed
     const italy = getItalyTime();
     if (!isContactWindow(italy)) {
       return res.json({
         status: 'outside_window',
-        italy_time: `${italy.hour}:${String(italy.minute).padStart(2,'0')}`
+        italy_time: `${italy.hour}:${String(italy.minute).padStart(2,'0')}`,
+        day: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][italy.day]
       });
     }
 
-    // Week reset check
+    // Handle week reset
     const currentCalls = await handleWeekReset(settings);
 
-    // Weekly limit check — notify if complete
+    // Weekly limit reached — wait for reset
     if (currentCalls >= settings.calls_per_week) {
-      // Update notification flag
-      await supabase.from('campaign_settings').update({
-        week_complete_notified: true
-      }).eq('id', 1);
+      await supabase.from('campaign_settings')
+        .update({ week_complete_notified: true })
+        .eq('id', 1);
 
       return res.json({
         status: 'week_complete',
-        message: `300 calls complete for this week. Will reset on ${new Date(new Date(settings.week_start_date).getTime() + 7*86400000).toDateString()}`,
-        calls: currentCalls
+        calls: currentCalls,
+        limit: settings.calls_per_week
       });
     }
 
-    // Calls per slot: 300/week ÷ ~12 slots = 25 per slot
+    // Batch size: 300/week ÷ ~12 slots = 25 per slot
     const remaining = settings.calls_per_week - currentCalls;
     const batchSize = Math.min(25, remaining);
 
@@ -248,7 +223,7 @@ export default async function handler(req, res) {
           vapi_call_id: result.id
         }).eq('id', bar.id);
         success++;
-        await new Promise(r => setTimeout(r, 8000));
+        await new Promise(r => setTimeout(r, 8000)); // 8s between calls — avoid rate limit
       } catch (err) {
         console.error(`Call failed: ${bar.name}`, err.message);
         failed++;
@@ -260,7 +235,7 @@ export default async function handler(req, res) {
     await supabase.from('campaign_settings').update({
       current_week_calls: newTotal,
       last_called_at: new Date().toISOString(),
-      week_complete_notified: newTotal >= settings.calls_per_week ? true : false
+      week_complete_notified: newTotal >= settings.calls_per_week
     }).eq('id', 1);
 
     return res.json({
