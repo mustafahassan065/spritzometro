@@ -223,7 +223,7 @@ export default async function handler(req, res) {
           vapi_call_id: result.id
         }).eq('id', bar.id);
         success++;
-        await new Promise(r => setTimeout(r, 8000)); // 8s between calls — avoid rate limit
+        await new Promise(r => setTimeout(r, 30000)); 
       } catch (err) {
         console.error(`Call failed: ${bar.name}`, err.message);
         failed++;
