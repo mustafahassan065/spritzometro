@@ -4,488 +4,423 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SpritzoMetro — Prezzi dello Spritz in Italia</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --white:   #ffffff;
-      --bg:      #f7f7f5;
-      --border:  #e8e8e4;
-      --text:    #1a1a1a;
-      --muted:   #888880;
-      --green:   #16a34a;
-      --orange:  #ea580c;
-      --red:     #dc2626;
-      --spritz:  #ea580c;
-      --font:    'Inter', sans-serif;
+      --dark:    #1C1812;
+      --bg:      #FAFAF7;
+      --orange:  #F05A28;
+      --text:    #1C1812;
+      --muted:   #8a8680;
+      --border:  #e8e4de;
+      --serif:   'Cormorant Garamond', serif;
+      --sans:    'DM Sans', sans-serif;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-    }
+    html, body { height: 100%; font-family: var(--sans); background: var(--bg); color: var(--text); overflow: hidden; }
 
     /* ── HEADER ── */
     header {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: var(--dark);
+      height: 52px;
+      display: flex; align-items: center;
+      padding: 0 20px; gap: 12px;
     }
 
     .logo {
-      font-size: 18px;
-      font-weight: 800;
-      color: var(--text);
-      letter-spacing: -0.5px;
-    }
-
-    .logo span { color: var(--spritz); }
-
-    .tagline {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .header-right {
-      margin-left: auto;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 11px;
+      font-family: var(--serif);
+      font-size: 22px;
       font-weight: 600;
-      color: var(--green);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      color: #FAFAF7;
+      letter-spacing: -0.3px;
+    }
+
+    .logo em {
+      font-style: italic;
+      color: var(--orange);
+    }
+
+    .live-wrap {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: #9a9690; font-weight: 400;
     }
 
     .live-dot {
-      width: 6px; height: 6px;
-      background: var(--green);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
+      width: 5px; height: 5px;
+      background: #22c55e; border-radius: 50%;
+      animation: lpulse 2s ease-in-out infinite;
+      box-shadow: 0 0 4px #22c55e;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+    @keyframes lpulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    .contribute-btn {
+      background: var(--orange); color: white; border: none;
+      border-radius: 5px; padding: 7px 14px;
+      font-size: 12px; font-weight: 600; font-family: var(--sans);
+      cursor: pointer; transition: opacity .15s; white-space: nowrap;
+    }
+    .contribute-btn:hover { opacity: .85; }
+
+    /* ── TICKER ── */
+    .ticker {
+      position: fixed; top: 52px; left: 0; right: 0; z-index: 190;
+      background: var(--orange);
+      height: 28px;
+      overflow: hidden;
+      display: flex; align-items: center;
     }
 
-    .header-btn {
-      background: var(--spritz);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 7px 14px;
-      font-size: 12px;
+    .ticker-track {
+      display: flex; gap: 0;
+      animation: ticker-scroll 30s linear infinite;
+      white-space: nowrap;
+    }
+
+    .ticker-track span {
+      font-size: 11px; font-weight: 600; color: white;
+      padding: 0 24px;
+      letter-spacing: 0.3px;
+    }
+
+    .ticker-track span::after {
+      content: '·';
+      margin-left: 24px;
+      opacity: 0.6;
+    }
+
+    @keyframes ticker-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ── HERO STATS ── */
+    .hero-stats {
+      position: fixed; top: 80px; left: 0; right: 0; z-index: 180;
+      background: var(--dark);
+      display: flex;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hstat {
+      flex: 1;
+      padding: 14px 20px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hstat:last-child { border-right: none; }
+
+    .hstat-val {
+      font-family: var(--serif);
+      font-size: 42px;
       font-weight: 600;
-      cursor: pointer;
-      font-family: var(--font);
-      transition: opacity 0.15s;
+      color: #FAFAF7;
+      line-height: 1;
+      margin-bottom: 5px;
     }
 
-    .header-btn:hover { opacity: 0.85; }
+    .hstat-val.orange { color: var(--orange); }
+
+    .hstat-lbl {
+      font-size: 10px;
+      font-weight: 500;
+      color: #6a6660;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
 
     /* ── LAYOUT ── */
     .layout {
       display: flex;
       height: 100vh;
-      padding-top: 56px;
+      padding-top: 80px; /* header + ticker */
     }
 
-    /* ── LEFT PANEL ── */
-    .panel {
-      width: 420px;
-      min-width: 420px;
-      background: var(--white);
+    /* After hero stats loads, layout shifts */
+    .layout.stats-visible { padding-top: 152px; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 380px;
+      min-width: 380px;
+      background: var(--bg);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
 
-    /* ── STATS BAR ── */
-    .stats-bar {
-      display: flex;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .stat {
-      flex: 1;
-      padding: 14px 16px;
-      border-right: 1px solid var(--border);
-    }
-
-    .stat:last-child { border-right: none; }
-
-    .stat-val {
-      font-size: 20px;
-      font-weight: 800;
-      color: var(--text);
-      line-height: 1;
-      margin-bottom: 3px;
-    }
-
-    .stat-val.spritz { color: var(--spritz); }
-
-    .stat-lbl {
-      font-size: 10px;
-      color: var(--muted);
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    /* ── SEARCH + FILTERS ── */
-    .controls {
-      padding: 12px;
+    /* ── FILTERS ── */
+    .filters {
+      padding: 12px 14px;
       border-bottom: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
 
-    .search-wrap {
-      position: relative;
-    }
+    .search-wrap { position: relative; }
 
     .search-input {
       width: 100%;
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 9px 12px 9px 34px;
-      font-size: 13px;
-      font-family: var(--font);
-      color: var(--text);
-      background: var(--bg);
-      outline: none;
-      transition: border-color 0.15s;
+      border-radius: 5px;
+      padding: 8px 12px 8px 32px;
+      font-size: 13px; font-family: var(--sans);
+      background: white; color: var(--text);
+      outline: none; transition: border-color .15s;
     }
 
-    .search-input:focus { border-color: var(--spritz); background: white; }
+    .search-input:focus { border-color: var(--orange); }
     .search-input::placeholder { color: var(--muted); }
 
     .search-icon {
-      position: absolute;
-      left: 10px; top: 50%;
+      position: absolute; left: 9px; top: 50%;
       transform: translateY(-50%);
-      font-size: 13px;
-      color: var(--muted);
+      font-size: 12px; color: var(--muted);
     }
 
-    .filter-row {
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
+    .chip-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
 
-    .city-btn {
+    .chip {
       padding: 4px 10px;
       border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 500;
-      font-family: var(--font);
-      color: var(--muted);
-      background: transparent;
-      cursor: pointer;
-      transition: all 0.15s;
-      white-space: nowrap;
+      border-radius: 4px;
+      font-size: 11px; font-weight: 500; font-family: var(--sans);
+      color: var(--muted); background: transparent;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
     }
 
-    .city-btn:hover { border-color: var(--spritz); color: var(--spritz); }
-    .city-btn.active { background: var(--spritz); border-color: var(--spritz); color: white; }
+    .chip:hover { border-color: var(--orange); color: var(--orange); }
+    .chip.active { background: var(--dark); border-color: var(--dark); color: white; }
 
     .sort-select {
       margin-left: auto;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 11px;
-      font-family: var(--font);
-      color: var(--muted);
-      background: transparent;
-      outline: none;
-      cursor: pointer;
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 4px 8px; font-size: 11px; font-family: var(--sans);
+      color: var(--muted); background: transparent; outline: none; cursor: pointer;
     }
 
     /* ── BAR LIST ── */
-    .bar-list {
-      flex: 1;
-      overflow-y: auto;
-    }
-
+    .bar-list { flex: 1; overflow-y: auto; }
     .bar-list::-webkit-scrollbar { width: 3px; }
     .bar-list::-webkit-scrollbar-thumb { background: var(--border); }
 
     .bar-item {
-      display: flex;
-      align-items: center;
-      padding: 12px 16px;
+      display: flex; align-items: center;
+      padding: 13px 16px;
       border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.1s;
-      gap: 12px;
+      cursor: pointer; transition: background .1s; gap: 10px;
     }
 
-    .bar-item:hover { background: var(--bg); }
-    .bar-item.active { background: #fff8f5; border-left: 3px solid var(--spritz); }
+    .bar-item:hover { background: white; }
+    .bar-item.active { background: white; border-left: 3px solid var(--orange); }
 
-    .bar-rank {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--muted);
-      min-width: 24px;
-    }
-
-    .bar-price {
-      font-size: 18px;
-      font-weight: 800;
-      min-width: 60px;
-      text-align: right;
-    }
-
-    .bar-price.green { color: var(--green); }
-    .bar-price.orange { color: var(--orange); }
-    .bar-price.red { color: var(--red); }
-    .bar-price.none { color: var(--muted); font-size: 14px; font-weight: 400; }
+    .bar-rank { font-size: 11px; font-weight: 500; color: var(--muted); min-width: 20px; }
 
     .bar-info { flex: 1; min-width: 0; }
 
     .bar-name {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 14px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+
+    .bar-sub {
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; gap: 5px; align-items: center;
+    }
+
+    .tag {
+      font-size: 9px; font-weight: 600; padding: 1px 5px;
+      border-radius: 3px; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    .tag.ai { background: #f0fdf4; color: #16a34a; }
+    .tag.user { background: #fff7ed; color: var(--orange); }
+    .tag.new { background: #fef3c7; color: #92400e; }
+
+    .bar-price {
+      font-family: var(--serif);
+      font-size: 26px; font-weight: 600;
       color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 2px;
+      min-width: 70px; text-align: right;
+      line-height: 1;
     }
 
-    .bar-meta {
-      font-size: 11px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+    .bar-price.none { font-family: var(--sans); font-size: 14px; color: var(--muted); font-weight: 400; }
 
-    .bar-source {
-      font-size: 9px;
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
-      flex-shrink: 0;
-    }
-
-    .bar-source.ai { background: #f0fdf4; color: var(--green); }
-    .bar-source.user { background: #fff7ed; color: var(--orange); }
-
-    .empty {
-      text-align: center;
-      padding: 48px 20px;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .empty .e-icon { font-size: 36px; margin-bottom: 10px; }
-
-    /* ── BOTTOM ACTIONS ── */
-    .panel-bottom {
-      border-top: 1px solid var(--border);
-      padding: 10px 12px;
-      display: flex;
-      gap: 8px;
-      background: var(--white);
-    }
-
-    .action-btn {
-      flex: 1;
-      padding: 9px;
+    /* Promo card every 8 rows */
+    .promo-card {
+      margin: 4px 12px;
+      background: var(--dark);
       border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: var(--font);
+      padding: 12px 14px;
+      display: flex; align-items: center; justify-content: space-between;
       cursor: pointer;
-      border: none;
-      transition: all 0.15s;
     }
 
-    .action-btn.primary { background: var(--spritz); color: white; }
-    .action-btn.primary:hover { opacity: 0.85; }
-    .action-btn.secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-    .action-btn.secondary:hover { border-color: var(--spritz); color: var(--spritz); }
+    .promo-card p { font-size: 12px; color: #9a9690; }
+    .promo-card span { font-size: 11px; color: var(--orange); font-weight: 600; }
 
     /* ── MAP ── */
-    #map {
-      flex: 1;
-      height: 100%;
-    }
+    #map { flex: 1; height: 100%; }
 
     .leaflet-popup-content-wrapper {
       border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-      font-family: var(--font);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+      font-family: var(--sans);
+      padding: 0;
     }
 
-    .leaflet-popup-content { margin: 12px 16px; }
+    .leaflet-popup-content { margin: 0; min-width: 180px; }
     .leaflet-popup-tip-container { display: none; }
+    .leaflet-popup-close-button { color: var(--muted) !important; top: 10px !important; right: 10px !important; }
 
-    .popup-city { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .popup-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-    .popup-price { font-size: 28px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
-    .popup-price.green { color: var(--green); }
-    .popup-price.orange { color: var(--orange); }
-    .popup-price.red { color: var(--red); }
-    .popup-price.none { color: var(--muted); font-size: 14px; font-weight: 400; }
-    .popup-date { font-size: 11px; color: var(--muted); }
+    .popup-inner { padding: 14px 16px; }
+    .popup-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.2; }
+    .popup-price { font-family: var(--serif); font-size: 32px; font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 4px; }
+    .popup-price.none { font-family: var(--sans); font-size: 13px; font-weight: 400; color: var(--muted); }
+    .popup-addr { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .popup-maps {
+      display: inline-block; padding: 6px 12px;
+      background: var(--dark); color: white; border-radius: 4px;
+      font-size: 11px; font-weight: 600; text-decoration: none;
+      transition: opacity .15s;
+    }
+    .popup-maps:hover { opacity: .8; }
 
-    /* ── MAP LEGEND ── */
+    /* City shortcuts top-right of map */
+    .city-shortcuts {
+      position: absolute; top: 12px; right: 12px; z-index: 500;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+
+    .city-short {
+      background: rgba(28,24,18,0.88);
+      backdrop-filter: blur(8px);
+      color: white; border: none; border-radius: 4px;
+      padding: 5px 10px; font-size: 11px; font-weight: 500;
+      font-family: var(--sans); cursor: pointer;
+      transition: background .15s; white-space: nowrap;
+      text-align: left;
+    }
+
+    .city-short:hover { background: var(--orange); }
+
+    /* Map legend bottom-left */
     .map-legend {
-      position: absolute;
-      bottom: 24px;
-      right: 16px;
-      z-index: 500;
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 14px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      position: absolute; bottom: 20px; left: 12px; z-index: 500;
+      background: rgba(28,24,18,0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 6px; padding: 10px 14px;
     }
 
-    .legend-title { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .legend-row { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text); margin-bottom: 5px; font-weight: 500; }
-    .ldot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-title { font-size: 9px; font-weight: 600; color: #6a6660; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #c8c4be; margin-bottom: 4px; font-weight: 400; }
+    .lcirc { width: 20px; height: 20px; border-radius: 50%; background: var(--dark); border: 1.5px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; font-weight: 700; flex-shrink: 0; }
 
-    /* ── MODAL ── */
-    .overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.4);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-    }
-
-    .overlay.open { opacity: 1; pointer-events: all; }
-
-    .modal {
-      background: white;
-      border-radius: 12px;
-      width: 440px;
-      max-width: calc(100vw - 32px);
-      max-height: calc(100vh - 80px);
+    /* ── SLIDE-IN FORM ── */
+    .form-panel {
+      position: fixed; right: -440px; top: 0; bottom: 0; width: 420px;
+      background: var(--dark); z-index: 500;
+      transition: right .3s ease;
       overflow-y: auto;
-      transform: translateY(16px);
-      transition: transform 0.2s;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+      display: flex; flex-direction: column;
     }
 
-    .overlay.open .modal { transform: translateY(0); }
+    .form-panel.open { right: 0; }
 
-    .modal-head {
+    .form-head {
       padding: 20px 20px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: flex-start; justify-content: space-between;
     }
 
-    .modal-title { font-size: 18px; font-weight: 700; }
-    .modal-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .modal-close { background: none; border: none; font-size: 18px; color: var(--muted); cursor: pointer; padding: 4px; }
-    .modal-body { padding: 20px; }
+    .form-title { font-size: 20px; font-weight: 700; color: white; }
+    .form-sub { font-size: 12px; color: #6a6660; margin-top: 3px; }
+    .form-close { background: none; border: none; color: #6a6660; font-size: 20px; cursor: pointer; }
+    .form-close:hover { color: white; }
+
+    .form-body { padding: 20px; flex: 1; }
 
     .field { margin-bottom: 14px; }
-    .field-label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+
+    .field-label {
+      display: block; font-size: 10px; font-weight: 600;
+      color: #6a6660; text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 5px;
+    }
+
     .field-input, .field-select, .field-textarea {
       width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px;
       padding: 9px 12px;
-      font-size: 13px;
-      font-family: var(--font);
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.15s;
+      font-size: 13px; font-family: var(--sans);
+      color: white; outline: none;
+      transition: border-color .15s;
     }
-    .field-input:focus, .field-select:focus, .field-textarea:focus { border-color: var(--spritz); }
-    .field-input::placeholder, .field-textarea::placeholder { color: var(--muted); }
+
+    .field-input:focus, .field-select:focus, .field-textarea:focus { border-color: var(--orange); }
+    .field-input::placeholder, .field-textarea::placeholder { color: #5a5650; }
+    .field-select option { background: var(--dark); color: white; }
     .field-textarea { resize: vertical; min-height: 70px; }
     .field-row { display: flex; gap: 10px; }
     .field-row .field { flex: 1; }
 
-    .submit-btn {
-      width: 100%;
-      padding: 11px;
-      background: var(--spritz);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 700;
-      font-family: var(--font);
-      cursor: pointer;
-      margin-top: 4px;
-      transition: opacity 0.15s;
+    .form-submit {
+      width: 100%; padding: 12px;
+      background: var(--orange); color: white; border: none;
+      border-radius: 5px; font-size: 14px; font-weight: 700;
+      font-family: var(--sans); cursor: pointer; margin-top: 4px;
+      transition: opacity .15s;
     }
 
-    .submit-btn:hover { opacity: 0.85; }
+    .form-submit:hover { opacity: .85; }
 
-    .success-msg {
-      display: none;
-      text-align: center;
-      padding: 20px;
-      color: var(--green);
-      font-weight: 600;
-      font-size: 14px;
+    .form-success {
+      display: none; text-align: center;
+      padding: 20px; color: #4ade80; font-size: 14px; font-weight: 600;
     }
+
+    /* Form overlay backdrop */
+    .form-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 499; display: none;
+    }
+
+    .form-overlay.open { display: block; }
 
     /* ── LOADER ── */
     .top-loader {
-      position: fixed; top: 56px; left: 0; right: 0;
-      height: 2px;
-      background: var(--spritz);
-      z-index: 999;
-      display: none;
-      animation: load 1.5s ease-in-out infinite;
-      transform-origin: left;
+      position: fixed; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--orange); z-index: 999; display: none;
+      animation: load 1.5s ease-in-out infinite; transform-origin: left;
     }
     .top-loader.active { display: block; }
     @keyframes load { 0%{transform:scaleX(0)}70%{transform:scaleX(.8)}100%{transform:scaleX(1);opacity:0} }
 
-    /* ── RESPONSIVE ── */
-    @media(max-width:768px){
-  .layout{display:flex;flex-direction:column;height:100vh}
-  #map{height:45vh;width:100%;flex-shrink:0}
-  .panel{position:relative;width:100%;min-width:unset;height:55vh;border-right:none;border-top:1px solid var(--border);overflow-y:auto;flex-shrink:0}
-  .tagline{display:none}
-  .stats-bar{display:none}
-}
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; padding-top: 80px; }
+      .layout.stats-visible { padding-top: 80px; }
+      .hero-stats { display: none; }
+      #map { height: 40vh; width: 100%; flex-shrink: 0; }
+      .sidebar { width: 100%; min-width: unset; height: 60vh; border-right: none; border-top: 1px solid var(--border); }
+      .city-shortcuts { display: none; }
+      .form-panel { width: 100%; right: -100%; }
+      .form-panel.open { right: 0; }
+    }
   </style>
 </head>
 <body>
@@ -494,49 +429,70 @@
 
 <!-- HEADER -->
 <header>
-  <div class="logo">Spritzo<span>Metro</span></div>
-  <div class="tagline">prezzi dello spritz in Italia</div>
+  <div class="logo">Spritzo<em>Metro</em></div>
+  <div class="live-wrap">
+    <div class="live-dot"></div>
+    <span id="liveCount">— bar live</span>
+  </div>
   <div class="header-right">
-    <div class="live-badge"><div class="live-dot"></div> Live</div>
-    <button class="header-btn" onclick="openModal('contribute')">+ Segnala Prezzo</button>
+    <button class="contribute-btn" onclick="openForm('contribute')">+ Segnala Prezzo</button>
   </div>
 </header>
 
-<div class="layout">
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="tickerTrack">
+    <span>Milano media €9.40</span>
+    <span>Roma media €7.80</span>
+    <span>Napoli media €5.20</span>
+    <span>Venezia media €8.50</span>
+    <span>Firenze media €6.90</span>
+    <span>Aggiornato ogni settimana</span>
+    <span>Milano media €9.40</span>
+    <span>Roma media €7.80</span>
+    <span>Napoli media €5.20</span>
+    <span>Venezia media €8.50</span>
+    <span>Firenze media €6.90</span>
+    <span>Aggiornato ogni settimana</span>
+  </div>
+</div>
 
-  <!-- LEFT PANEL -->
-  <div class="panel">
+<!-- HERO STATS -->
+<div class="hero-stats" id="heroStats">
+  <div class="hstat">
+    <div class="hstat-val orange" id="avgPrice">—</div>
+    <div class="hstat-lbl">Media Nazionale</div>
+  </div>
+  <div class="hstat">
+    <div class="hstat-val" id="minPrice">—</div>
+    <div class="hstat-lbl">Più Economico</div>
+  </div>
+  <div class="hstat">
+    <div class="hstat-val" id="maxPrice">—</div>
+    <div class="hstat-lbl">Più Caro</div>
+  </div>
+  <div class="hstat">
+    <div class="hstat-val" id="totalBars">—</div>
+    <div class="hstat-lbl">Bar Monitorati</div>
+  </div>
+</div>
 
-    <!-- STATS -->
-    <div class="stats-bar">
-      <div class="stat">
-        <div class="stat-val spritz" id="avgPrice">—</div>
-        <div class="stat-lbl">Media nazionale</div>
-      </div>
-      <div class="stat">
-        <div class="stat-val" id="minPrice">—</div>
-        <div class="stat-lbl">Più economico</div>
-      </div>
-      <div class="stat">
-        <div class="stat-val" id="maxPrice">—</div>
-        <div class="stat-lbl">Più caro</div>
-      </div>
-      <div class="stat">
-        <div class="stat-val" id="totalBars">—</div>
-        <div class="stat-lbl">Bar totali</div>
-      </div>
-    </div>
+<!-- LAYOUT -->
+<div class="layout stats-visible" id="mainLayout">
 
-    <!-- CONTROLS -->
-    <div class="controls">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="filters">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input class="search-input" id="searchInput" type="text" placeholder="Cerca bar o città..."/>
       </div>
-      <div class="filter-row">
-        <div id="cityFilters" style="display:flex;gap:6px;flex-wrap:wrap;flex:1">
-          <button class="city-btn active" data-city="all" onclick="setCity('all')">Tutti</button>
-        </div>
+      <div class="chip-row">
+        <button class="chip active" data-filter="all" onclick="setFilter('all')">Tutti</button>
+        <button class="chip" data-filter="under4" onclick="setFilter('under4')">Sotto €4</button>
+        <button class="chip" data-filter="mid" onclick="setFilter('mid')">€4–€7</button>
+        <button class="chip" data-filter="over7" onclick="setFilter('over7')">Sopra €7</button>
+        <button class="chip" data-filter="ai" onclick="setFilter('ai')">Verificati AI</button>
         <select class="sort-select" id="sortSelect">
           <option value="price_asc">Più economico</option>
           <option value="price_desc">Più caro</option>
@@ -544,117 +500,133 @@
           <option value="recent">Recenti</option>
         </select>
       </div>
+      <div class="chip-row" id="cityFilters">
+        <button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>
+      </div>
     </div>
-
-    <!-- LIST -->
     <div class="bar-list" id="barList">
-      <div class="empty"><div class="e-icon">🍊</div>Caricamento in corso...</div>
+      <div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Caricamento...</div>
     </div>
-
-    <!-- BOTTOM -->
-    <div class="panel-bottom">
-      <button class="action-btn primary" onclick="openModal('contribute')">+ Aggiungi Prezzo</button>
-      <button class="action-btn secondary" onclick="openModal('claim')">Sei il proprietario?</button>
-    </div>
-
   </div>
 
   <!-- MAP -->
   <div style="flex:1;position:relative;height:100%;overflow:hidden;">
     <div id="map" style="height:100%;width:100%;"></div>
+
+    <!-- City shortcuts -->
+    <div class="city-shortcuts">
+      <button class="city-short" onclick="flyTo(41.9,12.5,6)">Italia</button>
+      <button class="city-short" onclick="flyTo(45.464,9.190,13)">Milano</button>
+      <button class="city-short" onclick="flyTo(41.902,12.496,13)">Roma</button>
+      <button class="city-short" onclick="flyTo(40.851,14.268,13)">Napoli</button>
+      <button class="city-short" onclick="flyTo(45.434,12.338,13)">Venezia</button>
+      <button class="city-short" onclick="flyTo(43.769,11.256,13)">Firenze</button>
+    </div>
+
+    <!-- Legend -->
     <div class="map-legend">
-      <div class="legend-title">Prezzo Spritz</div>
-      <div class="legend-row"><div class="ldot" style="background:var(--green)"></div>Economico &lt; €4</div>
-      <div class="legend-row"><div class="ldot" style="background:var(--orange)"></div>Nella media €4–€6</div>
-      <div class="legend-row"><div class="ldot" style="background:var(--red)"></div>Caro &gt; €6</div>
-      <div class="legend-row"><div class="ldot" style="background:#ccc)"></div>N/D</div>
+      <div class="legend-title">Marcatori</div>
+      <div class="legend-row">
+        <div class="lcirc">€</div>
+        Prezzo Aperol Spritz
+      </div>
+      <div class="legend-row">
+        <div class="lcirc" style="background:var(--orange)">?</div>
+        Prezzo non disponibile
+      </div>
     </div>
   </div>
 
 </div>
 
-<!-- CONTRIBUTE MODAL -->
-<div class="overlay" id="contributeOverlay">
-  <div class="modal">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title">Segnala un Prezzo 🍊</div>
-        <div class="modal-sub">Hai visto il prezzo di uno spritz? Condividilo!</div>
-      </div>
-      <button class="modal-close" onclick="closeModal('contribute')">✕</button>
+<!-- CONTRIBUTE FORM (slide-in) -->
+<div class="form-overlay" id="contributeOverlay" onclick="closeForm('contribute')"></div>
+<div class="form-panel" id="contributePanel">
+  <div class="form-head">
+    <div>
+      <div class="form-title">Segnala un Prezzo 🍊</div>
+      <div class="form-sub">Hai visto il prezzo di uno spritz? Condividilo con la community.</div>
     </div>
-    <div class="modal-body">
-      <div class="field-row">
-        <div class="field">
-          <label class="field-label">Nome del Bar *</label>
-          <input class="field-input" id="c_name" placeholder="Es. Bar Centrale"/>
-        </div>
-        <div class="field">
-          <label class="field-label">Città *</label>
-          <select class="field-select" id="c_city">
-            <option value="">Seleziona...</option>
-            <option>Milano</option><option>Roma</option><option>Napoli</option>
-            <option>Venezia</option><option>Firenze</option><option>Torino</option>
-            <option>Bologna</option><option>Palermo</option><option>Verona</option><option>Altra</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label class="field-label">Prezzo Aperol Spritz (€) *</label>
-          <input class="field-input" id="c_price" type="number" placeholder="4.50" step="0.5" min="1" max="25"/>
-        </div>
-        <div class="field">
-          <label class="field-label">Indirizzo</label>
-          <input class="field-input" id="c_address" placeholder="Via Roma 12"/>
-        </div>
-      </div>
-      <div class="field">
-        <label class="field-label">Note (opzionale)</label>
-        <textarea class="field-textarea" id="c_notes" placeholder="happy hour, snack inclusi..."></textarea>
-      </div>
-      <button class="submit-btn" onclick="submitContribute()">Invia Prezzo</button>
-      <div class="success-msg" id="c_success">✅ Grazie! Il tuo contributo è stato ricevuto.</div>
-    </div>
+    <button class="form-close" onclick="closeForm('contribute')">✕</button>
   </div>
-</div>
-
-<!-- CLAIM MODAL -->
-<div class="overlay" id="claimOverlay">
-  <div class="modal">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title">Sei il Proprietario? 🏪</div>
-        <div class="modal-sub">Gestisci la tua presenza su SpritzoMetro</div>
-      </div>
-      <button class="modal-close" onclick="closeModal('claim')">✕</button>
-    </div>
-    <div class="modal-body">
+  <div class="form-body">
+    <div class="field-row">
       <div class="field">
         <label class="field-label">Nome del Bar *</label>
-        <input class="field-input" id="cl_bar" placeholder="Nome esatto del bar"/>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label class="field-label">Il tuo nome *</label>
-          <input class="field-input" id="cl_owner" placeholder="Nome e cognome"/>
-        </div>
-        <div class="field">
-          <label class="field-label">Email *</label>
-          <input class="field-input" id="cl_email" type="email" placeholder="email@esempio.it"/>
-        </div>
+        <input class="field-input" id="c_name" placeholder="Es. Bar Centrale"/>
       </div>
       <div class="field">
-        <label class="field-label">Telefono</label>
-        <input class="field-input" id="cl_phone" placeholder="+39 ..."/>
+        <label class="field-label">Città *</label>
+        <select class="field-select" id="c_city">
+          <option value="">Seleziona...</option>
+          <option>Milano</option><option>Roma</option><option>Napoli</option>
+          <option>Venezia</option><option>Firenze</option><option>Torino</option>
+          <option>Bologna</option><option>Palermo</option><option>Verona</option><option>Altra</option>
+        </select>
       </div>
-      <div class="field">
-        <label class="field-label">Messaggio</label>
-        <textarea class="field-textarea" id="cl_msg" placeholder="Aggiorna il prezzo o descrivi il tuo bar..."></textarea>
-      </div>
-      <button class="submit-btn" onclick="submitClaim()">Invia Richiesta</button>
-      <div class="success-msg" id="cl_success">✅ Richiesta inviata! Ti contatteremo presto.</div>
     </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label">Prezzo Aperol Spritz (€) *</label>
+        <input class="field-input" id="c_price" type="number" placeholder="4.50" step="0.5" min="1" max="25"/>
+      </div>
+      <div class="field">
+        <label class="field-label">Indirizzo</label>
+        <input class="field-input" id="c_address" placeholder="Via Roma 12"/>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Note (opzionale)</label>
+      <textarea class="field-textarea" id="c_notes" placeholder="happy hour, snack inclusi, tipo spritz..."></textarea>
+    </div>
+    <button class="form-submit" onclick="submitContribute()">Invia Prezzo</button>
+    <div class="form-success" id="c_success">✅ Grazie! Il tuo contributo è stato ricevuto.</div>
+
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);">
+      <div style="font-size:12px;color:#6a6660;margin-bottom:12px;">Sei il proprietario del bar?</div>
+      <button onclick="closeForm('contribute');openForm('claim')"
+        style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:5px;color:#9a9690;font-size:12px;font-family:var(--sans);cursor:pointer;">
+        Richiedi ownership del tuo bar →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CLAIM FORM (slide-in) -->
+<div class="form-overlay" id="claimOverlay" onclick="closeForm('claim')"></div>
+<div class="form-panel" id="claimPanel">
+  <div class="form-head">
+    <div>
+      <div class="form-title">Sei il Proprietario? 🏪</div>
+      <div class="form-sub">Gestisci la tua presenza su SpritzoMetro gratuitamente.</div>
+    </div>
+    <button class="form-close" onclick="closeForm('claim')">✕</button>
+  </div>
+  <div class="form-body">
+    <div class="field">
+      <label class="field-label">Nome del Bar *</label>
+      <input class="field-input" id="cl_bar" placeholder="Nome esatto del bar"/>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label">Il tuo nome *</label>
+        <input class="field-input" id="cl_owner" placeholder="Nome e cognome"/>
+      </div>
+      <div class="field">
+        <label class="field-label">Email *</label>
+        <input class="field-input" id="cl_email" type="email" placeholder="email@esempio.it"/>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Telefono</label>
+      <input class="field-input" id="cl_phone" placeholder="+39 ..."/>
+    </div>
+    <div class="field">
+      <label class="field-label">Messaggio</label>
+      <textarea class="field-textarea" id="cl_msg" placeholder="Aggiorna il prezzo o descrivi il tuo bar..."></textarea>
+    </div>
+    <button class="form-submit" onclick="submitClaim()">Invia Richiesta</button>
+    <div class="form-success" id="cl_success">✅ Richiesta inviata! Ti contatteremo presto.</div>
   </div>
 </div>
 
@@ -664,33 +636,36 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let allBars=[], filteredBars=[], markers={}, map;
-let activeCity='all', activeBarId=null;
+let activeCity='all', activeFilter='all', activeBarId=null;
 
-// MAP
+// ── MAP ──
 function initMap() {
-  map = L.map('map', {center:[42.5,12.5], zoom:6, zoomControl:true, attributionControl:false});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}).addTo(map);
+  map = L.map('map', {center:[42,12.5], zoom:6, zoomControl:false, attributionControl:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
   setTimeout(()=>map.invalidateSize(), 200);
-  setTimeout(()=>map.invalidateSize(), 600);
-  setTimeout(()=>map.invalidateSize(), 1200);
+  setTimeout(()=>map.invalidateSize(), 700);
+  setTimeout(()=>map.invalidateSize(), 1400);
   window.addEventListener('resize', ()=>map.invalidateSize());
 }
 
-function priceColor(p) { if(!p)return'#ccc'; if(p<4)return'#16a34a'; if(p<=6)return'#ea580c'; return'#dc2626'; }
-function priceClass(p) { if(!p)return'none'; if(p<4)return'green'; if(p<=6)return'orange'; return'red'; }
-
-function makeMarker(price) {
-  const color = priceColor(price);
-  const label = price ? `€${price.toFixed(1)}` : '?';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="30" viewBox="0 0 52 30">
-    <rect x="1" y="1" width="50" height="22" rx="4" fill="${color}"/>
-    <text x="26" y="13" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="Inter,sans-serif" font-weight="800" font-size="11">${label}</text>
-    <polygon points="20,23 26,30 32,23" fill="${color}"/>
-  </svg>`;
-  return L.divIcon({html:svg, className:'', iconSize:[52,30], iconAnchor:[26,30], popupAnchor:[0,-32]});
+function flyTo(lat, lng, zoom) {
+  map.flyTo([lat, lng], zoom, {duration: 1.2});
 }
 
-// LOAD DATA
+function makeMarker(price) {
+  const hasPrice = price !== null && price !== undefined;
+  const bg = hasPrice ? '#1C1812' : '#F05A28';
+  const label = hasPrice ? `€${price.toFixed(1)}` : '?';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="22" fill="${bg}" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+    <text x="24" y="25" text-anchor="middle" dominant-baseline="middle" fill="white"
+      font-family="Cormorant Garamond,serif" font-weight="600" font-size="${hasPrice?'12':'14'}">${label}</text>
+  </svg>`;
+  return L.divIcon({html:svg, className:'', iconSize:[48,48], iconAnchor:[24,24], popupAnchor:[0,-26]});
+}
+
+// ── LOAD DATA ──
 async function loadData() {
   document.getElementById('loader').classList.add('active');
   try {
@@ -699,14 +674,16 @@ async function loadData() {
     allBars = bars.map(bar => {
       const prices = (bar.prices||[]).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at));
       const latest = prices[0];
-      return {...bar, latestPrice:latest?.price||null, calledAt:latest?.called_at||null, source:latest?.source||null};
+      const isNew = latest?.called_at && (Date.now()-new Date(latest.called_at).getTime()) < 7*24*3600*1000;
+      return {...bar, latestPrice:latest?.price||null, calledAt:latest?.called_at||null, source:latest?.source||null, isNew};
     });
     buildCityFilters();
     updateStats();
+    updateTicker();
     applyFilters();
     setupRealtime();
   } catch(err) {
-    document.getElementById('barList').innerHTML = `<div class="empty"><div class="e-icon">⚠️</div>Errore nel caricamento.</div>`;
+    document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento.</div>`;
   } finally {
     document.getElementById('loader').classList.remove('active');
   }
@@ -715,18 +692,13 @@ async function loadData() {
 function buildCityFilters() {
   const cities = [...new Set(allBars.map(b=>b.city).filter(Boolean))].sort();
   const wrap = document.getElementById('cityFilters');
-  wrap.innerHTML = `<button class="city-btn active" data-city="all" onclick="setCity('all')">Tutti</button>`;
+  wrap.innerHTML = `<button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>`;
   cities.forEach(c => {
     const btn = document.createElement('button');
-    btn.className='city-btn'; btn.dataset.city=c; btn.textContent=c;
+    btn.className='chip'; btn.dataset.city=c; btn.textContent=c;
     btn.onclick=()=>setCity(c); wrap.appendChild(btn);
   });
-}
-
-function setCity(city) {
-  activeCity=city;
-  document.querySelectorAll('.city-btn').forEach(b=>b.classList.toggle('active',b.dataset.city===city));
-  applyFilters();
+  document.getElementById('liveCount').textContent = `${allBars.length} bar live`;
 }
 
 function updateStats() {
@@ -741,21 +713,58 @@ function updateStats() {
   }
 }
 
+function updateTicker() {
+  // Update ticker with real city averages
+  const cityAvgs = {};
+  allBars.filter(b=>b.latestPrice&&b.city).forEach(b=>{
+    if(!cityAvgs[b.city]) cityAvgs[b.city]=[];
+    cityAvgs[b.city].push(b.latestPrice);
+  });
+  const items = Object.entries(cityAvgs).map(([city,prices])=>{
+    const avg = prices.reduce((s,p)=>s+p,0)/prices.length;
+    return `${city} media €${avg.toFixed(2)}`;
+  });
+  items.push(`${allBars.length} bar monitorati`);
+  items.push('Aggiornato ogni settimana');
+  const doubled = [...items, ...items];
+  document.getElementById('tickerTrack').innerHTML = doubled.map(t=>`<span>${t}</span>`).join('');
+}
+
+function setCity(city) {
+  activeCity=city;
+  document.querySelectorAll('[data-city]').forEach(b=>b.classList.toggle('active',b.dataset.city===city));
+  applyFilters();
+}
+
+function setFilter(filter) {
+  activeFilter=filter;
+  document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));
+  applyFilters();
+}
+
 function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase();
   const sort = document.getElementById('sortSelect').value;
+
   filteredBars = allBars.filter(b => {
-    const mc = activeCity==='all'||b.city===activeCity;
-    const ms = !search||b.name.toLowerCase().includes(search)||(b.city||'').toLowerCase().includes(search)||(b.address||'').toLowerCase().includes(search);
-    return mc&&ms;
+    const mc = activeCity==='all' || b.city===activeCity;
+    const ms = !search || b.name.toLowerCase().includes(search) || (b.city||'').toLowerCase().includes(search) || (b.address||'').toLowerCase().includes(search);
+    let mf = true;
+    if (activeFilter==='under4') mf = b.latestPrice && b.latestPrice < 4;
+    else if (activeFilter==='mid') mf = b.latestPrice && b.latestPrice >= 4 && b.latestPrice <= 7;
+    else if (activeFilter==='over7') mf = b.latestPrice && b.latestPrice > 7;
+    else if (activeFilter==='ai') mf = b.source === 'ai_call';
+    return mc && ms && mf;
   });
-  filteredBars.sort((a,b)=>{
+
+  filteredBars.sort((a,b) => {
     if(sort==='price_asc') return (a.latestPrice||99)-(b.latestPrice||99);
     if(sort==='price_desc') return (b.latestPrice||0)-(a.latestPrice||0);
     if(sort==='name_asc') return a.name.localeCompare(b.name);
     if(sort==='recent') return new Date(b.calledAt||0)-new Date(a.calledAt||0);
     return 0;
   });
+
   renderList();
   renderMarkers();
 }
@@ -763,26 +772,36 @@ function applyFilters() {
 function renderList() {
   const list = document.getElementById('barList');
   if (!filteredBars.length) {
-    list.innerHTML=`<div class="empty"><div class="e-icon">🔍</div>Nessun bar trovato.</div>`;
+    list.innerHTML=`<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>`;
     return;
   }
-  list.innerHTML = filteredBars.map((bar,i) => {
-    const pc = priceClass(bar.latestPrice);
+
+  let html = '';
+  filteredBars.forEach((bar,i) => {
     const price = bar.latestPrice ? `€${bar.latestPrice.toFixed(2)}` : '—';
     const date = bar.calledAt ? new Date(bar.calledAt).toLocaleDateString('it-IT') : '';
-    const meta = [bar.city, date].filter(Boolean).join(' · ');
-    const srcLabel = bar.source==='ai_call' ? 'AI' : bar.source==='user_submit' ? 'Utente' : '';
-    const srcClass = bar.source==='ai_call' ? 'ai' : 'user';
-    return `<div class="bar-item ${bar.id===activeBarId?'active':''}" onclick="selectBar('${bar.id}')" data-id="${bar.id}">
+    const srcTag = bar.source==='ai_call' ? `<span class="tag ai">AI</span>` : bar.source==='user_submit' ? `<span class="tag user">Utente</span>` : '';
+    const newTag = bar.isNew ? `<span class="tag new">Nuovo</span>` : '';
+
+    html += `<div class="bar-item ${bar.id===activeBarId?'active':''}" onclick="selectBar('${bar.id}')" data-id="${bar.id}">
       <div class="bar-rank">${i+1}</div>
       <div class="bar-info">
         <div class="bar-name">${bar.name}</div>
-        <div class="bar-meta">${meta}</div>
+        <div class="bar-sub">${bar.city||''}${date?' · '+date:''} ${srcTag}${newTag}</div>
       </div>
-      <div class="bar-price ${pc}">${price}</div>
-      ${srcLabel ? `<div class="bar-source ${srcClass}">${srcLabel}</div>` : ''}
+      <div class="bar-price ${!bar.latestPrice?'none':''}">${price}</div>
     </div>`;
-  }).join('');
+
+    // Promo card every 8 rows
+    if ((i+1) % 8 === 0 && i < filteredBars.length-1) {
+      html += `<div class="promo-card" onclick="openForm('contribute')">
+        <p>Il tuo bar non è nell'indice?</p>
+        <span>Aggiungilo gratis →</span>
+      </div>`;
+    }
+  });
+
+  list.innerHTML = html;
 }
 
 function renderMarkers() {
@@ -790,17 +809,18 @@ function renderMarkers() {
   markers={};
   filteredBars.forEach(bar=>{
     if(!bar.latitude||!bar.longitude) return;
-    const m = L.marker([bar.latitude,bar.longitude],{icon:makeMarker(bar.latestPrice)});
-    const date = bar.calledAt ? new Date(bar.calledAt).toLocaleDateString('it-IT') : 'N/D';
-    m.bindPopup(`<div>
-      <div class="popup-city">${bar.city||''}</div>
+    const m = L.marker([bar.latitude,bar.longitude], {icon:makeMarker(bar.latestPrice)});
+    const addr = bar.address || '';
+    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(bar.name+' '+addr)}`;
+    m.bindPopup(`<div class="popup-inner">
       <div class="popup-name">${bar.name}</div>
       ${bar.latestPrice
-        ?`<div class="popup-price ${priceClass(bar.latestPrice)}">€${bar.latestPrice.toFixed(2)}</div>`
-        :`<div class="popup-price none">Prezzo non disponibile</div>`}
-      <div class="popup-date">${date}</div>
-    </div>`,{maxWidth:240});
-    m.on('click',()=>selectBar(bar.id,false));
+        ? `<div class="popup-price">€${bar.latestPrice.toFixed(2)}</div>`
+        : `<div class="popup-price none">Prezzo non disponibile</div>`}
+      ${addr ? `<div class="popup-addr">${addr}</div>` : ''}
+      <a class="popup-maps" href="${mapsUrl}" target="_blank">Apri in Maps →</a>
+    </div>`, {maxWidth:240});
+    m.on('click', ()=>selectBar(bar.id, false));
     m.addTo(map); markers[bar.id]=m;
   });
 }
@@ -819,14 +839,21 @@ function setupRealtime() {
   db.channel('live')
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
       const bar=allBars.find(b=>b.id===payload.new.bar_id);
-      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();applyFilters();}
+      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
     })
     .subscribe();
 }
 
-function openModal(t){document.getElementById(t+'Overlay').classList.add('open')}
-function closeModal(t){document.getElementById(t+'Overlay').classList.remove('open')}
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')}));
+// ── FORMS ──
+function openForm(type) {
+  document.getElementById(type+'Panel').classList.add('open');
+  document.getElementById(type+'Overlay').classList.add('open');
+}
+
+function closeForm(type) {
+  document.getElementById(type+'Panel').classList.remove('open');
+  document.getElementById(type+'Overlay').classList.remove('open');
+}
 
 async function submitContribute() {
   const name=document.getElementById('c_name').value.trim();
@@ -845,7 +872,7 @@ async function submitContribute() {
   const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
   if(error){alert('Errore nel salvataggio.');return}
   document.getElementById('c_success').style.display='block';
-  setTimeout(()=>{closeModal('contribute');document.getElementById('c_success').style.display='none'},2500);
+  setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
 }
 
 async function submitClaim() {
@@ -855,7 +882,7 @@ async function submitClaim() {
   if(!barName||!ownerName||!email){alert('Compila i campi obbligatori (*)');return}
   await db.from('claims').insert({bar_name:barName,owner_name:ownerName,email,phone:document.getElementById('cl_phone').value.trim(),message:document.getElementById('cl_msg').value.trim()});
   document.getElementById('cl_success').style.display='block';
-  setTimeout(()=>{closeModal('claim');document.getElementById('cl_success').style.display='none'},2500);
+  setTimeout(()=>{closeForm('claim');document.getElementById('cl_success').style.display='none'},2500);
 }
 
 document.getElementById('searchInput').addEventListener('input',applyFilters);
